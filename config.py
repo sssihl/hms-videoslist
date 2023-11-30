@@ -1,0 +1,5 @@
+videoTypes = [
+    "OCT",
+    "MRI",
+    "CT"
+]
