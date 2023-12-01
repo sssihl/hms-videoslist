@@ -22,7 +22,7 @@ class App(tk.Frame):
 
         self.create_widgets()
         self.preview_recorder()
-        self.saver = Saver()
+        self.helper = DbHelper()
     
     def create_widgets(self):
         # main frames
@@ -123,11 +123,11 @@ class App(tk.Frame):
         self._out.release()
     
     def save_recording(self):
-        self.saver.save(12345, "OCT", "/server/12345/OCT008.mp4")
+        self.helper.save(12345, "OCT", "/server/12345/OCT008.mp4")
         
 
 
-class Saver():
+class DbHelper():
     
     def __init__(self):
         self.db = mysql.connector.connect(
