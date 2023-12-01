@@ -1,10 +1,13 @@
 import os
 import mysql.connector
 from tkinter import ttk
+from datetime import datetime
+import datetime as dt
 import cv2
 import tkinter as tk
 import config
 from PIL import Image, ImageTk
+
 
 
 
@@ -22,7 +25,6 @@ class App(tk.Frame):
 
         self.create_widgets()
         self.preview_recorder()
-        self.helper = DbHelper()
     
     def create_widgets(self):
         # main frames
@@ -33,9 +35,13 @@ class App(tk.Frame):
 
         # top frames
         self.inputFrame = tk.Frame(self.topFrame)
-        self.inputFrame.pack(side=tk.LEFT, fill=tk.Y)
+        self.inputFrame.pack(side=tk.LEFT, fill=tk.BOTH)
         self.validateFrame = tk.Frame(self.topFrame)
-        self.validateFrame.pack(side=tk.LEFT)
+        self.patientNotFound = tk.Label(self.topFrame,text="No Patient with this ID")
+        self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
+        # 
+        # self.validateFrame.pack(side=tk.LEFT)
+        # self.validateFrame.pack_forget()
 
         # input_id
         tk.Label(self.inputFrame,text="ID").grid(row = 0, column=0)
@@ -45,6 +51,7 @@ class App(tk.Frame):
         # TODO datepicker
         tk.Label(self.inputFrame,text="Date").grid(row = 1, column=0)
         self.input_date = tk.Entry(self.inputFrame)
+        self.input_date.insert(0,str(datetime.now()).split()[0])
         self.input_date.grid(row=1, column=1)
 
         ## validate
@@ -66,7 +73,7 @@ class App(tk.Frame):
 
         tk.Button(self.bottomFrame,text="select"),
         self.buttons = {
-            "start": tk.Button(self.bottomFrame,text="start", bg='#aaaaff'),
+            "start": tk.Button(self.bottomFrame,text="start recording", bg='#aaaaff'),
             "stop": tk.Button(self.bottomFrame,text="stop", bg = '#ffaaaa'),
             "save": tk.Button(self.bottomFrame,text="save",bg="#88ff88"),
         }
@@ -82,6 +89,23 @@ class App(tk.Frame):
         # self.statusText["text"] = "this is just a test label"
         self.statusText.pack(side=tk.BOTTOM, fill=tk.X)
     
+    def check_id(self):
+    # callback for id
+        pass
+    
+    def patient_validation(self):
+        self.helper = DbHelper()
+        patient_data = self.helper.get_patient_data(211219)
+        self.helper.close()
+
+        if patient_data:
+            self.patientNotFound.pack_forget()
+            self.validateFrame.pack(side=tk.LEFT)
+        else:
+            self.validateFrame.pack_forget()
+            self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
+            
+
     def preview_recorder(self):
     # self.opencv_img to be used for all recording purposes
 
@@ -113,7 +137,7 @@ class App(tk.Frame):
             print("Started recording")
 
         # the resolution should be received from the VideoCapture module
-        self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'DIVX'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
+        self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
         self.is_recording = True
     
     def stop_recording(self):
@@ -123,7 +147,10 @@ class App(tk.Frame):
         self._out.release()
     
     def save_recording(self):
-        self.helper.save(12345, "OCT", "/server/12345/OCT008.mp4")
+        date_of_visit = dt.date(2000,1,1)
+        self.helper = DbHelper()
+        self.helper.save(12345, "OCT", date_of_visit)
+        self.helper.close()
         
 
 
@@ -138,37 +165,84 @@ class DbHelper():
             database=os.getenv("MYSQL_DATABASE")
         )
 
-        self.table = os.getenv("MYSQL_TABLE")
+        self.video_table = os.getenv("MYSQL_VIDEO_TABLE")
+        self.patient_table= os.getenv("MYSQL_PATIENT_TABLE")
         self.cursor = self.db.cursor()
         self.saved = False
     
     def save(self, *args):
-        # patient_id, video_type, filename = args
-        status = self.save_to_server(*args)
+    # args = (patient_id, video_type, date_of_visit)
+
+        filename = self.generate_filename(*args)
+        status = self.save_to_server(*args,filename)
+
         if self.saved:
-            self.update_db(*args)
+            self.update_db(*args,filename)
         else:
             # TODO status message and output error
             print(status) # write the status
     
-    def save_to_server(self, patient_id, video_type, filename):
-        self.saved = True
-        return "unable to save the file"
+    def save_to_server(self, patient_id, video_type, date_of_visit, filename):
+        try:
+            # TODO server saving logic
+            self.saved = True
 
-    def update_db(self, patient_id, video_type, filename):
+        except Exception as e:
+            # else
+            return "unable to save the file"
+
+    def update_db(self, patient_id, video_type, date_of_visit, filename):
         self.saved = False
         try:
             self.cursor.execute(
-                f"INSERT INTO `{self.table}` (patient_id, video_type, filename) values (%s, %s, %s)",
-                (patient_id,video_type,filename),)
+                f"INSERT INTO `{self.video_table}` (patient_id, video_type, filename, date_of_visit) values (%s, %s, %s, %s)",
+                (patient_id,video_type,filename, date_of_visit),)
             self.db.commit()
             print(self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
         except Exception as e:
             # TODO status message and output error
             print("Dev Error:", e)
+    
+    def get_patient_data(self, patient_id):
+        self.cursor.execute(f"SELECT * FROM {self.patient_table} where id={patient_id}")
+        result = self.cursor.fetchall()
+        print(result)
+        if result:
+            return result[0]
+        else:
+            return False
 
+    def generate_filename(self,*args):
+        # get the latest filename form server
+        self.cursor.execute(
+            f""" select r.patient_id, r.video_type, r.filename, r.created from rec_save_videos r 
+                inner join (
+                    select patient_id, video_type, max(created) as MaxDate
+                    from rec_save_videos
+                    group by video_type, patient_id ) rm
+                on  r.patient_id=rm.patient_id and
+                    r.video_type=rm.video_type and
+                    r.created=rm.MaxDate
+                where r.patient_id=%s and r.video_type=%s
+            """,args[0:2]);  # date_of_visit argument not required
+        result = self.cursor.fetchall()
+        # extract last number and get next one (could have done better using regex)
+        print("Dev Fetched:",result)
+        if result:
+            # increment and format (we use -1 to take the last entry to prevent redundency, but our app will take care of it anyway)
+            formatted_number = "%03d" % (int(result[-1][2].split('OCT')[1].split(".")[0])+1)
+        else:
+            # first video of this type
+            formatted_number = "%03d" % 1
+        # change "%03d" to %04d% for 4 digits
+        return f"/server/{args[0]}/{args[1]}{formatted_number}.mp4"
+    
+    def close(self):
+        # can't keep the connection open else, other instances won't be able to use it.
+        self.db.close()
         
         
+
         
 
 
