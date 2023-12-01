@@ -5,11 +5,6 @@ import tkinter as tk
 import config
 from PIL import Image, ImageTk
 
-# should be changed to 0,1,2... depending on capture device
-vid = cv2.VideoCapture('../assets/discourse.mp4')
-
-vid.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
-vid.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
 
 
 class App(tk.Frame):
@@ -17,8 +12,15 @@ class App(tk.Frame):
         super().__init__(master)
         self.master = master
         self.pack()
+        # should be changed to 0,1,2... depending on capture device
+        self._cam = cv2.VideoCapture(config.discourse)
+        self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
+        self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
+
+        self.is_recording = False;
+
         self.create_widgets()
-        self.open_recorder()
+        self.preview_recorder()
     
     def create_widgets(self):
         # main frames
@@ -33,11 +35,12 @@ class App(tk.Frame):
         self.validateFrame = tk.Frame(self.topFrame)
         self.validateFrame.pack(side=tk.LEFT)
 
-        # input
+        # input_id
         tk.Label(self.inputFrame,text="ID").grid(row = 0, column=0)
         self.input_id = tk.Entry(self.inputFrame)
         self.input_id.grid(row = 0, column = 1)
-            # TODO datepicker
+
+        # TODO datepicker
         tk.Label(self.inputFrame,text="Date").grid(row = 1, column=0)
         self.input_date = tk.Entry(self.inputFrame)
         self.input_date.grid(row=1, column=1)
@@ -60,30 +63,35 @@ class App(tk.Frame):
         self.choose_source.pack(side=tk.LEFT)
 
         tk.Button(self.bottomFrame,text="select"),
-        self.buttons = [
-            tk.Button(self.bottomFrame,text="start", bg='#aaaaff'),
-            tk.Button(self.bottomFrame,text="stop", bg = '#ffaaaa'),
-            tk.Button(self.bottomFrame,text="save",bg="#88ff88"),
-        ]
-        self.buttons[0].pack(side=tk.LEFT, )
-        self.buttons[1].pack(side=tk.LEFT, )
-        self.buttons[2].pack(side=tk.RIGHT, expand = True )
+        self.buttons = {
+            "start": tk.Button(self.bottomFrame,text="start", bg='#aaaaff'),
+            "stop": tk.Button(self.bottomFrame,text="stop", bg = '#ffaaaa'),
+            "save": tk.Button(self.bottomFrame,text="save",bg="#88ff88"),
+        }
+        self.buttons["start"]["command"] = self.start_recording
+        self.buttons["stop"]["command"] = self.stop_recording
+        self.buttons["start"].pack(side=tk.LEFT, )
+        self.buttons["stop"].pack(side=tk.LEFT, )
+        self.buttons["save"].pack(side=tk.RIGHT, expand = True )
 
         self.statusText = tk.Label(self,relief=tk.RAISED)
         # self.statusText["text"] = "this is just a test label"
         self.statusText.pack(side=tk.BOTTOM, fill=tk.X)
     
-    def open_recorder(self):
+    def preview_recorder(self):
+    # self.opencv_img to be used for all recording purposes
 
         # capture frame by frame
-        ok, frame = vid.read()
+        self.ok, self.frame = self._cam.read()
 
+        if self.is_recording:
+            self._out.write(self.frame)
 
         # convert image colorspace
-        opencv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        self.opencv_img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGBA)
 
         # capture latest frame
-        captured_img = Image.fromarray(opencv_img)
+        captured_img = Image.fromarray(self.opencv_img)
 
         # convert captured to photoimage
         self.photo_img = ImageTk.PhotoImage(image=captured_img)
@@ -91,8 +99,30 @@ class App(tk.Frame):
         # Display photoimage in Label
         self.videoWidget.configure(image=self.photo_img)
 
+
         # label_widget
-        self.videoWidget.after(10, self.open_recorder)
+        self.videoWidget.after(16, self.preview_recorder) # 16 value needs testing
+    
+    def start_recording(self, filename = 'output.mp4'):
+        if self.ok:
+            # TODO show on status
+            print("Started recording")
+
+        # the resolution should be received from the VideoCapture module
+        self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'DIVX'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
+        self.is_recording = True
+    
+    def stop_recording(self):
+        # TODO show on status
+        print("Stopped recording")
+        self.is_recording = False
+        self._out.release()
+
+
+
+
+
+        
 
 
 
@@ -103,3 +133,4 @@ if __name__ == "__main__":
     root.title("Rec Save")
     app = App(master=root)
     app.mainloop()
+    app._cam.release()
