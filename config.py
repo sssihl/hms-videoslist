@@ -5,3 +5,5 @@ videoTypes = [
 ]
 
 width, height = 800, 600
+
+discourse = "../assets/discourse.mp4"
