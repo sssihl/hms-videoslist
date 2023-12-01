@@ -2,3 +2,4 @@
 *.mp4
 _*.py
 __pycache__
+.env
