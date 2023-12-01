@@ -1,4 +1,5 @@
-import numpy as np
+import os
+import mysql.connector
 from tkinter import ttk
 import cv2
 import tkinter as tk
@@ -21,6 +22,7 @@ class App(tk.Frame):
 
         self.create_widgets()
         self.preview_recorder()
+        self.saver = Saver()
     
     def create_widgets(self):
         # main frames
@@ -70,6 +72,8 @@ class App(tk.Frame):
         }
         self.buttons["start"]["command"] = self.start_recording
         self.buttons["stop"]["command"] = self.stop_recording
+        self.buttons["save"]["command"] = self.save_recording
+
         self.buttons["start"].pack(side=tk.LEFT, )
         self.buttons["stop"].pack(side=tk.LEFT, )
         self.buttons["save"].pack(side=tk.RIGHT, expand = True )
@@ -117,8 +121,55 @@ class App(tk.Frame):
         print("Stopped recording")
         self.is_recording = False
         self._out.release()
+    
+    def save_recording(self):
+        self.saver.save(12345, "OCT", "/server/12345/OCT008.mp4")
+        
 
 
+class Saver():
+    
+    def __init__(self):
+        self.db = mysql.connector.connect(
+            host=os.getenv("MYSQL_HOST"),
+            port=os.getenv("MYSQL_PORT"),
+            user=os.getenv("MYSQL_USER"),
+            password=os.getenv("MYSQL_PASSWORD"),
+            database=os.getenv("MYSQL_DATABASE")
+        )
+
+        self.table = os.getenv("MYSQL_TABLE")
+        self.cursor = self.db.cursor()
+        self.saved = False
+    
+    def save(self, *args):
+        # patient_id, video_type, filename = args
+        status = self.save_to_server(*args)
+        if self.saved:
+            self.update_db(*args)
+        else:
+            # TODO status message and output error
+            print(status) # write the status
+    
+    def save_to_server(self, patient_id, video_type, filename):
+        self.saved = True
+        return "unable to save the file"
+
+    def update_db(self, patient_id, video_type, filename):
+        self.saved = False
+        try:
+            self.cursor.execute(
+                f"INSERT INTO `{self.table}` (patient_id, video_type, filename) values (%s, %s, %s)",
+                (patient_id,video_type,filename),)
+            self.db.commit()
+            print(self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
+        except Exception as e:
+            # TODO status message and output error
+            print("Dev Error:", e)
+
+        
+        
+        
 
 
 
