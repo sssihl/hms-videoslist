@@ -1,6 +1,16 @@
+import numpy as np
 from tkinter import ttk
+import cv2
 import tkinter as tk
 import config
+from PIL import Image, ImageTk
+
+# should be changed to 0,1,2... depending on capture device
+vid = cv2.VideoCapture('../assets/discourse.mp4')
+
+vid.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
+vid.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
+
 
 class App(tk.Frame):
     def __init__(self, master=None):
@@ -8,6 +18,7 @@ class App(tk.Frame):
         self.master = master
         self.pack()
         self.create_widgets()
+        self.open_recorder()
     
     def create_widgets(self):
         # main frames
@@ -40,8 +51,8 @@ class App(tk.Frame):
         # bottom frame
 
         # TODO video frame
-        self.test_box = tk.Text(self.bottomFrame)
-        self.test_box.pack()
+        self.videoWidget = tk.Label(self.bottomFrame)
+        self.videoWidget.pack()
 
         self.choose_source = ttk.Combobox(
             self.bottomFrame, state="readonly",
@@ -61,6 +72,29 @@ class App(tk.Frame):
         self.statusText = tk.Label(self,relief=tk.RAISED)
         # self.statusText["text"] = "this is just a test label"
         self.statusText.pack(side=tk.BOTTOM, fill=tk.X)
+    
+    def open_recorder(self):
+
+        # capture frame by frame
+        ok, frame = vid.read()
+
+
+        # convert image colorspace
+        opencv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+
+        # capture latest frame
+        captured_img = Image.fromarray(opencv_img)
+
+        # convert captured to photoimage
+        self.photo_img = ImageTk.PhotoImage(image=captured_img)
+
+        # Display photoimage in Label
+        self.videoWidget.configure(image=self.photo_img)
+
+        # label_widget
+        self.videoWidget.after(10, self.open_recorder)
+
+
 
 
 

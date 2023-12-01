@@ -3,3 +3,5 @@ videoTypes = [
     "MRI",
     "CT"
 ]
+
+width, height = 800, 600
