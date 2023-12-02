@@ -113,7 +113,7 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 
 :heavy_check_mark: `STRUCTURE` DATABASE table
 
-- [ ] `ACTION`: Copy to windows server
+:heavy_check_mark: `ACTION`: Copy to windows server
 
 # Database Structure
 
