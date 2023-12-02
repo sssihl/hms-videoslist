@@ -10,11 +10,45 @@ This app records the output of a camera device and stores it in the windows serv
 
 1. Just run the following command to install all the required dependencies
 
-```bash
+```console
 pip install -r requirements.txt
 ```
 
-2. rename the `.env.example` file to `.env` and fill in the options (contact Database Admin for setup)
+2. Run the `migrations/videos_table.sql` in `mysql to generate the videos table which will be used to save information about the videos and their location
+
+At this point, you have **two choices**:
+
+### I don't have an existing `patients_table`
+> If you don't have a `patients_table` in your database, then create one by running `migrations/patients_table.sql` file in mysql to generate the table
+
+### I have an existing `patients_table` called `my_patients_table`
+> If you have an existing `my_patients_table` that you want to use with the application, you have to do two things.
+
+Update your `.env` variable to set the `MYSQL_PATIENT_TABLE`
+```.env
+...
+MYSQL_PATIENT_TABLE=my_patients_table
+```
+
+Update your `config.json` with the correct field names from the patient's table (say, they are `myid`, `myname`, `mydob`, `mysex`)
+```json
+{
+
+  ...
+
+  "patient_table_args": {
+    "id": "myid",
+    "name": "myname",
+    "date_of_birth": "mydob",
+    "sex": "mysex"
+  }
+}
+```
+
+  
+  
+
+3. rename the `.env.example` file to `.env` and fill in the options (contact Database Admin for setup)
 
 ```.env
 # MYSQL credentials
@@ -28,7 +62,7 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 ```
 > ensure you don't give any space between variable name and value (e.g. `MYSQL_HOST = localhost` is invalid
 
-3. in the `config.json` file set `"videoDevice"` variable to `0`,`1`,`2` (integer) experiment till it works. 
+4. in the `config.json` file set `"videoDevice"` variable to `0`,`1`,`2` (integer) experiment till it works. 
 
 ```json
 {
@@ -47,13 +81,14 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 ```
 > These numbers (`0`,`1`,`2`...) represent the video devices connected to the system. In case of multiple devices, you will have to check which is the exact device that you want to record from.
 
-4. Run the `main.py` file to **launch the application**
+5. Run the `main.py` file to **launch the application**
 
 ## Actions
 
 - [x] POST: **Patient ID**
 - [x] FETCH: Name Age Sex (to be displayed for validation)
 - [x] INPUT: **Date of Visit**
+- [ ] FEATURE: Date Picker (currently, user has to type in the date)
 - [x] INPUT: (select) **source of video output** (OCT/MRI/CT)
 - [x] ACTIONS: (RECORD) (STOP) (SAVE)
 - [x] DATABASE table
