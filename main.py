@@ -5,7 +5,6 @@ from datetime import datetime
 import datetime as dt
 import cv2
 import tkinter as tk
-import config
 from PIL import Image, ImageTk
 import json
 
@@ -17,7 +16,7 @@ class Config:
     
     def update(self):
         with open('config.json',"w") as f:
-            json.dump(config.__dict__,f)
+            json.dump(config.__dict__,f, indent=4)
     
     def sync(self):
         with open('config.json') as f:
@@ -37,7 +36,7 @@ class App(tk.Frame):
         # an App frame
         super().__init__(master)
         self.master = master
-        self.pack()
+        self.pack(expand=True)
         # should be changed to 0,1,2... depending on capture device
         self._cam = cv2.VideoCapture(config.videoDevice)
         self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
@@ -85,7 +84,7 @@ class App(tk.Frame):
         self.topFrame = tk.Frame(self)
         self.bottomFrame = tk.Frame(self)
         self.topFrame.pack(fill=tk.X, expand=True)
-        self.bottomFrame.pack()
+        self.bottomFrame.pack(expand=True)
 
         # TOP FRAME ----------------------------------------------------
 
@@ -123,7 +122,7 @@ class App(tk.Frame):
         self.choose_source = ttk.Combobox(
             self.bottomFrame, state="readonly", textvariable=self.source_var,
             values = config.videoTypes)
-        self.choose_source.current(config.last_source)
+        self.choose_source.current(config.videoTypes.index(config.last_source))
         self.choose_source.pack(side=tk.LEFT)
         self.source_var.trace_add('write',self.change_source)
         print("DEV SOURCE VAR: ",self.source_var.get())
@@ -147,6 +146,10 @@ class App(tk.Frame):
         self.status_text = tk.Label(self,relief=tk.RAISED)
         # self.statusText["text"] = "this is just a test label"
         self.status_text.pack(side=tk.BOTTOM, fill=tk.X)
+
+
+        # to enter last patient entry by default
+        self.id_var.set(config.last_patient_id)
     
     def check_id(self, var, index, mode):
         val = self.id_var.get()
@@ -175,9 +178,10 @@ class App(tk.Frame):
             age = datetime.now().year - patient_data[2].year
             sex = patient_data[3]
             dob = patient_data[2].strftime("%d/%m/%Y")
+            config.last_patient_id = patient_id
             config.update()
             self.patientNotFound.pack_forget()
-            self.validateFrame.pack(side=tk.LEFT, anchor='e')
+            self.validateFrame.pack(side=tk.RIGHT, fill=tk.X)
             self.info[0]["text"] = f"\tName\t:{name}"
             self.info[1]["text"] = f"\tAge\t:{age}y"
             self.info[2]["text"] = f"\tSex\t:{sex}"
@@ -185,7 +189,7 @@ class App(tk.Frame):
             return True
         else:
             self.validateFrame.pack_forget()
-            self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH, anchor='e')
+            self.patientNotFound.pack(side=tk.RIGHT,fill=tk.BOTH, anchor="center")
             return False
             
     def preview_recorder(self):
@@ -226,7 +230,7 @@ class App(tk.Frame):
     def stop_recording(self):
         self.is_recording = False
         self._out.release()
-        self.set_status("STOPPED RECORDING","DEFAULT")
+        self.set_status("STOPPED RECORDING")
         print("STOPPED RECORDING")
     
     def save_recording(self):
@@ -316,17 +320,20 @@ class DbHelper():
             self.db.commit()
             print("DB UPDATE:",self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
         except Exception as e:
-            print("Dev Error:", e)
+            print("ERROR UPDATE DB", e)
     
     def get_patient_data(self, patient_id):
         patient_id = int(patient_id)
-        self.cursor.execute(f"SELECT * FROM {self.patient_table} where id={patient_id}")
-        result = self.cursor.fetchall()
-        print("FETCHED PATIENT DATA:", result)
-        if result:
-            return result[0]
-        else:
-            return False
+        try:
+            self.cursor.execute(f"SELECT * FROM {self.patient_table} where id={patient_id}")
+            result = self.cursor.fetchall()
+            print("FETCHED PATIENT DATA:", result)
+            if result:
+                return result[0]
+            else:
+                return False
+        except Exception as e:
+            print("ERROR PATIENT DATA",e)
 
     def generate_filename(self,*args):
         # get the latest filename form server
@@ -351,11 +358,14 @@ class DbHelper():
             # first video of this type
             formatted_number = "%03d" % 1
         # change "%03d" to %04d% for 4 digits
-        return f"/server/{patient_id}/{type}{formatted_number}.mp4"
+        return f"//{config.windowsServer}/{patient_id}/{args[2].replace('-','')}/{type}{formatted_number}.mp4"
     
     def close(self):
         # can't keep the connection open else, other instances won't be able to use it.
-        self.db.close()
+        try:
+            self.db.close()
+        except Exception as e:
+            print("ERROR CLOSE", e)
         
         
 
