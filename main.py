@@ -7,6 +7,27 @@ import cv2
 import tkinter as tk
 import config
 from PIL import Image, ImageTk
+import json
+
+
+
+class Config:
+    def __init__(self):
+        self.sync()
+    
+    def update(self):
+        with open('config.json',"w") as f:
+            json.dump(config.__dict__,f)
+    
+    def sync(self):
+        with open('config.json') as f:
+            _dict = json.load(f)
+            self.__dict__.update(_dict)
+        
+
+config = Config()
+        
+
 
 
 
@@ -18,7 +39,7 @@ class App(tk.Frame):
         self.master = master
         self.pack()
         # should be changed to 0,1,2... depending on capture device
-        self._cam = cv2.VideoCapture(config.discourse)
+        self._cam = cv2.VideoCapture(config.videoDevice)
         self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
         self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
 
@@ -104,7 +125,8 @@ class App(tk.Frame):
             values = config.videoTypes)
         self.choose_source.current(config.last_source)
         self.choose_source.pack(side=tk.LEFT)
-        print("DEV source var: ",self.source_var.get())
+        self.source_var.trace_add('write',self.change_source)
+        print("DEV SOURCE VAR: ",self.source_var.get())
 
         # start stop save buttons
         self.buttons = {
@@ -126,7 +148,7 @@ class App(tk.Frame):
         # self.statusText["text"] = "this is just a test label"
         self.status_text.pack(side=tk.BOTTOM, fill=tk.X)
     
-    def check_id(self, var: tk.StringVar, index, mode):
+    def check_id(self, var, index, mode):
         val = self.id_var.get()
         
         if len(val) == 6: # what is id length
@@ -134,6 +156,10 @@ class App(tk.Frame):
         else:
             self.patientNotFound.pack_forget()
             self.validateFrame.pack_forget()
+    
+    def change_source(self, var, index, mode):
+        config.last_source = self.source_var.get()
+        config.update()
     
         
 
@@ -145,16 +171,15 @@ class App(tk.Frame):
         self.helper.close()
 
         if patient_data:
-            print("DEV PRINT",patient_data)
             name = patient_data[1]
-            age = patient_data[2].year
+            age = datetime.now().year - patient_data[2].year
             sex = patient_data[3]
             dob = patient_data[2].strftime("%d/%m/%Y")
-
+            config.update()
             self.patientNotFound.pack_forget()
             self.validateFrame.pack(side=tk.LEFT, anchor='e')
             self.info[0]["text"] = f"\tName\t:{name}"
-            self.info[1]["text"] = f"\tAge\t:{age}"
+            self.info[1]["text"] = f"\tAge\t:{age}y"
             self.info[2]["text"] = f"\tSex\t:{sex}"
             self.info[3]["text"] = f"\tDOB\t:{dob}"
             return True
@@ -191,7 +216,7 @@ class App(tk.Frame):
     def start_recording(self, filename = 'output.mp4'):
         if self.ok:
             self.set_status("STARTED RECORDING","DEFAULT")
-            print("Started recording")
+            print("STARTED RECORDING")
             # the resolution should be received from the VideoCapture module
             self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
             self.is_recording = True
@@ -202,7 +227,7 @@ class App(tk.Frame):
         self.is_recording = False
         self._out.release()
         self.set_status("STOPPED RECORDING","DEFAULT")
-        print("Stopped recording")
+        print("STOPPED RECORDING")
     
     def save_recording(self):
 
@@ -289,7 +314,7 @@ class DbHelper():
                 f"INSERT INTO `{self.video_table}` (patient_id, video_type, filename, date_of_visit) values (%s, %s, %s, %s)",
                 (patient_id,video_type,filename, date_of_visit),)
             self.db.commit()
-            print(self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
+            print("DB UPDATE:",self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
         except Exception as e:
             print("Dev Error:", e)
     
@@ -319,7 +344,6 @@ class DbHelper():
             """,(patient_id, type));  # date_of_visit argument not required
         result = self.cursor.fetchall()
         # extract last number and get next one (could have done better using regex)
-        print("FETCHED FILENAME DATA:",result)
         if result:
             # increment and format (we use -1 to take the last entry to prevent redundency, but our app will take care of it anyway)
             formatted_number = "%03d" % (int(result[-1][2].split(type)[1].split(".")[0])+1)
