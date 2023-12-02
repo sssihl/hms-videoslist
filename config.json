@@ -1,5 +1,5 @@
 {
-    "windowsServer": "//BOOK",
+    "fileServerLocation": "STORAGE",
     "videoDevice": "../assets/discourse.mp4",
     "videoTypes": [
         "OCT",

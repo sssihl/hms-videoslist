@@ -6,9 +6,8 @@ Aum Sri Sai Ram
 
 This app records the output of a camera device and stores it in the windows server location with a database entry to keep track of which patient the video belongs to.
 
-> [!CAUTION]
-> **DO NOT USE IT FOR THE LIVE ENVIRONMENT YET!**
-> 
+> [!CAUTION] > **DO NOT USE IT FOR THE LIVE ENVIRONMENT YET!**
+>
 > The app doesn't have the "COPYING to the SERVER" logic, so it is only for preview as of now. The database and the rest work
 
 # Installation steps
@@ -25,22 +24,26 @@ pip install -r requirements.txt
 > At this point, depending on whether you have an existing `patients_table` you will have choose between the following
 
 - **I don't have an existing `patients_table`**
+
   > If you don't have a `patients_table` in your database, then create one by running `migrations/patients_table.sql` file in mysql to generate the table
 
 - **I have an existing `patients_table` called `my_patients_table`**
+
   > If you have an existing `my_patients_table` that you want to use with the application, you have to do two things.
 
   Update your `.env` variable to set the `MYSQL_PATIENT_TABLE`
+
   ```.env
   ...
   MYSQL_PATIENT_TABLE=my_patients_table
   ```
 
   Update your `config.json` with the correct field names from the patient's table (say, they are `myid`, `myname`, `mydob`, `mysex`)
+
   ```json
   {
     ...previous entries
-  
+
     "patient_table_args": {
       "id": "myid",
       "name": "myname",
@@ -49,9 +52,6 @@ pip install -r requirements.txt
      }
   }
   ```
-
-  
-  
 
 3. rename the `.env.example` file to `.env` and fill in the options (contact Database Admin for setup)
 
@@ -63,27 +63,25 @@ MYSQL_USER=username
 MYSQL_PASSWORD=password@123
 MYSQL_DATABASE=dbname
 MYSQL_VIDEO_TABLE=rec_save_videos # don't change unless required
-MYSQL_PATIENT_TABLE=rec_save_patients 
+MYSQL_PATIENT_TABLE=rec_save_patients
 ```
+
 > ensure you don't give any space between variable name and value (e.g. `MYSQL_HOST = localhost` is invalid
 
-4. in the `config.json` file set `"videoDevice"` variable to `0`,`1`,`2` (integer) experiment till it works. 
+4. in the `config.json` file set `"videoDevice"` variable to `0`,`1`,`2` (integer) experiment till it works.
 
 ```json
 {
-    "windowsServer": "//BOOK",
-    "videoDevice": 0,
-    "videoTypes": [
-        "OCT",
-        "MRI",
-        "CT"
-    ],
-    "width": 1280,
-    "height": 720,
-    "last_source": "MRI",
-    "last_patient_id": "211219"
+  "fileServerLocation": "//BOOK",
+  "videoDevice": 0,
+  "videoTypes": ["OCT", "MRI", "CT"],
+  "width": 1280,
+  "height": 720,
+  "last_source": "MRI",
+  "last_patient_id": "211219"
 }
 ```
+
 > These numbers (`0`,`1`,`2`...) represent the video devices connected to the system. In case of multiple devices, you will have to check which is the exact device that you want to record from.
 
 5. Run the `main.py` file to **launch the application**
@@ -92,7 +90,7 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 
 :heavy_check_mark: `GET`: **Patient ID**
 
-:heavy_check_mark: `FETCH`: Name Age Sex (to be displayed for validation) 
+:heavy_check_mark: `FETCH`: Name Age Sex (to be displayed for validation)
 
 :heavy_check_mark: `INPUT`: Date of Visit
 
@@ -104,19 +102,20 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 
 :heavy_check_mark: `STRUCTURE` DATABASE table
 
-
 - [ ] `ACTION`: Copy to windows server
 
 # Database Structure
 
 ### VIDEOS:
-| ID | PATIENT_ID | VIDEO_TYPE | FILENAME | CREATED | DATE_OF_VISIT|
-|---|---|---|---|---|---|
-| INT (AUTO) | INT (UUID) | (OCT/CT/...) | (fullpath of file in windows server) |(DATETIME format) | (DATE format)
+
+| ID         | PATIENT_ID | VIDEO_TYPE   | FILENAME                             | CREATED           | DATE_OF_VISIT |
+| ---------- | ---------- | ------------ | ------------------------------------ | ----------------- | ------------- |
+| INT (AUTO) | INT (UUID) | (OCT/CT/...) | (fullpath of file in windows server) | (DATETIME format) | (DATE format) |
 
 ### PATIENTS
-| ID | NAME | DOB | SEX |
-|---|---|---|---|
+
+| ID         | NAME               | DOB  | SEX           |
+| ---------- | ------------------ | ---- | ------------- |
 | INT (UUID) | full name (STRING) | DATE | (MALE/FEMALE) |
 
 # Folder Structure in server (for saving)

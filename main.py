@@ -1,9 +1,7 @@
-import os
-import mysql.connector
+import os, shutil
+import mysql.connector, cv2
 from tkinter import ttk
 from datetime import datetime
-import datetime as dt
-import cv2
 import tkinter as tk
 from PIL import Image, ImageTk
 import json
@@ -170,7 +168,10 @@ class App(tk.Frame):
     
     def validate_patient(self, patient_id):
         self.helper = DbHelper(self)
-        patient_data = self.helper.get_patient_data(patient_id)
+        if self.helper.ok:
+            patient_data = self.helper.get_patient_data(patient_id)
+        else:
+            self.set_status("Couldn't connect to Database! Please contact Admin","ERROR")
         self.helper.close()
 
         if patient_data:
@@ -237,7 +238,11 @@ class App(tk.Frame):
 
         if self.validate_patient(self.id_var.get()):
             self.helper = DbHelper(self)
-            self.helper.save(int(self.id_var.get()), self.source_var.get(), self.date_var.get())
+            if self.helper.ok:
+                self.helper.save(int(self.id_var.get()), self.source_var.get(), self.date_var.get())
+            else:
+                self.set_status("Couldn't connect to Database! Please contact Admin","ERROR")
+
             self.helper.close()
         else:
             self.set_status("Invalid Patient ID. Could not find patient", "ERROR")
@@ -254,6 +259,9 @@ class App(tk.Frame):
         elif type == "DEFAULT":
             self.status_text["fg"] = "#ffffff"
             self.status_text["bg"] = "#8888ff"
+        elif type == "WARNING":
+            self.status_text["bg"] = "#FFFF99"
+            self.status_text["fg"] = "#000000"
         else:
             self.status_text["fg"] = "#000000"
             self.status_text["bg"] = "#ffffff"
@@ -289,9 +297,15 @@ class DbHelper():
 
     
     def save(self, *args):
-    # args = (patient_id, video_type, date_of_visit)
+    # args = (patient_id, video_type, date_of_visit) 
+
+        # check whether something was recorded or not
+        if not os.path.isfile('output.mp4'):
+            self.app.set_status(f"WARNING: NO FILE RECORDED","WARNING")
+            return
 
         filename = self.generate_filename(*args)
+
         status = self.save_to_server(*args,filename)
 
         if self.saved:
@@ -304,10 +318,18 @@ class DbHelper():
     def save_to_server(self, patient_id, video_type, date_of_visit, filename):
         try:
             # TODO server saving logic
-            self.saved = True
-            return f"saved file as {filename} successfully"
+            os.makedirs(os.path.dirname(filename),exist_ok=True)
+            try:
+                shutil.copy('output.mp4',filename)
+                self.saved = True
+                os.remove('output.mp4')
+                return f"saved file as {filename} successfully"
+            except:
+                self.saved = False
+                return f"An error occured while copying the file to server"
 
         except Exception as e:
+            self.saved = False
             # else
             return e
 
@@ -361,7 +383,7 @@ class DbHelper():
             # first video of this type
             formatted_number = "%03d" % 1
         # change "%03d" to %04d% for 4 digits
-        return f"{config.windowsServer}/{patient_id}/{args[2].replace('-','')}/{type}{formatted_number}.mp4"
+        return f"{config.fileServerLocation}/{patient_id}/{args[2].replace('-','')}/{type}{formatted_number}.mp4"
     
     def close(self):
         # can't keep the connection open else, other instances won't be able to use it.
