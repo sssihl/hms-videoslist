@@ -1,13 +1,15 @@
 {
-    "windowsServer": "BOOK",
-    "videoDevice": "../assets/discourse.mp4",
-    "videoTypes": [
-        "OCT",
-        "MRI",
-        "CT"
-    ],
-    "width": 1280,
-    "height": 720,
-    "last_source": "MRI",
-    "last_patient_id": "211219"
+  "windowsServer": "//BOOK",
+  "videoDevice": "../assets/discourse.mp4",
+  "videoTypes": ["OCT", "MRI", "CT"],
+  "width": 1280,
+  "height": 720,
+  "last_source": "MRI",
+  "last_patient_id": "211220",
+  "patient_table_args": {
+    "id": "id",
+    "name": "name",
+    "date_of_birth": "dob",
+    "sex": "sex"
+  }
 }

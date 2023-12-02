@@ -325,7 +325,10 @@ class DbHelper():
     def get_patient_data(self, patient_id):
         patient_id = int(patient_id)
         try:
-            self.cursor.execute(f"SELECT * FROM {self.patient_table} where id={patient_id}")
+            self.cursor.execute(f"""
+            SELECT {config.patient_table_args["id"]}, {config.patient_table_args["name"]},
+            {config.patient_table_args["date_of_birth"]}, {config.patient_table_args["sex"]}
+            FROM {self.patient_table} where id={patient_id}""")
             result = self.cursor.fetchall()
             print("FETCHED PATIENT DATA:", result)
             if result:
@@ -358,7 +361,7 @@ class DbHelper():
             # first video of this type
             formatted_number = "%03d" % 1
         # change "%03d" to %04d% for 4 digits
-        return f"//{config.windowsServer}/{patient_id}/{args[2].replace('-','')}/{type}{formatted_number}.mp4"
+        return f"{config.windowsServer}/{patient_id}/{args[2].replace('-','')}/{type}{formatted_number}.mp4"
     
     def close(self):
         # can't keep the connection open else, other instances won't be able to use it.
