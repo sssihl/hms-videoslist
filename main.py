@@ -152,7 +152,7 @@ class App(tk.Frame):
     def check_id(self, var, index, mode):
         val = self.id_var.get()
         
-        if len(val) == 6: # what is id length
+        if len(val) == 12: # what is id length
             self.validate_patient(val)
         else:
             self.patientNotFound.pack_forget()
@@ -352,7 +352,6 @@ class DbHelper():
             print("ERROR UPDATE DB", e)
     
     def get_patient_data(self, patient_id):
-        patient_id = int(patient_id)
         try:
             self.cursor.execute(f"""
             SELECT `{config.patient_table_args["id"]}`, `{config.patient_table_args["name"]}`,

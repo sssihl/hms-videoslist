@@ -10,8 +10,8 @@
     ],
     "width": 1280,
     "height": 720,
-    "last_source": "MRI",
-    "last_patient_id": "211220",
+    "last_source": "OCT",
+    "last_patient_id": "111222333445",
     "patient_table_args": {
         "id": "id",
         "name": "name",
