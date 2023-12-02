@@ -13,6 +13,7 @@ from PIL import Image, ImageTk
 
 class App(tk.Frame):
     def __init__(self, master=None):
+        # an App frame
         super().__init__(master)
         self.master = master
         self.pack()
@@ -21,36 +22,68 @@ class App(tk.Frame):
         self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
         self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
 
+        # state for allowing the frames to be recorded
         self.is_recording = False;
 
+        # creates all the text variables for accessing widget data
+        self.create_vars()
+
+        # creates all the widgets and puts them on the screen
         self.create_widgets()
+        self.run_tests()
         self.preview_recorder()
+
+    def run_tests(self):
+        helper = DbHelper(self)
+        if helper.ok:
+            self.set_status("DB connected")
+    
+    def create_vars(self):
+        self.id_var = tk.StringVar()
+        self.date_var = tk.StringVar()
+        self.source_var = tk.StringVar()
     
     def create_widgets(self):
+    # STRUCTURE
+    # - topFrame
+    #     - inputFrame 
+    #         - input_id
+    #         - input_date
+    #     - validateFrame / patientNotFound
+    #         [contained in info as a list]
+    #         - [0] Name (label)
+    #         - [1] Age (label)
+    #         - [2] Sex (label)
+    # - bottomFrame
+    #     - video_widget
+    #     - choose_source - start - save - stop
+    #     (stored as buttons [0]    [1]    [2])
+    # - status_text
+
         # main frames
         self.topFrame = tk.Frame(self)
         self.bottomFrame = tk.Frame(self)
         self.topFrame.pack(fill=tk.X, expand=True)
         self.bottomFrame.pack()
 
-        # top frames
+        # TOP FRAME ----------------------------------------------------
+
         self.inputFrame = tk.Frame(self.topFrame)
         self.inputFrame.pack(side=tk.LEFT, fill=tk.BOTH)
         self.validateFrame = tk.Frame(self.topFrame)
         self.patientNotFound = tk.Label(self.topFrame,text="No Patient with this ID")
-        self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
-        # 
+        # self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
         # self.validateFrame.pack(side=tk.LEFT)
-        # self.validateFrame.pack_forget()
 
         # input_id
         tk.Label(self.inputFrame,text="ID").grid(row = 0, column=0)
-        self.input_id = tk.Entry(self.inputFrame)
+        self.input_id = tk.Entry(self.inputFrame, textvariable=self.id_var)
         self.input_id.grid(row = 0, column = 1)
 
+        # input_date
         # TODO datepicker
         tk.Label(self.inputFrame,text="Date").grid(row = 1, column=0)
-        self.input_date = tk.Entry(self.inputFrame)
+        self.input_date = tk.Entry(self.inputFrame, textvariable=self.date_var)
         self.input_date.insert(0,str(datetime.now()).split()[0])
         self.input_date.grid(row=1, column=1)
 
@@ -60,23 +93,27 @@ class App(tk.Frame):
             i.pack(expand=True)
 
         
-        # bottom frame
+        # BOTTOM FRAME -----------------------------------------------
 
         # TODO video frame
-        self.videoWidget = tk.Label(self.bottomFrame)
-        self.videoWidget.pack()
+        self.video_widget = tk.Label(self.bottomFrame)
+        self.video_widget.pack()
 
+        # choose_source
         self.choose_source = ttk.Combobox(
-            self.bottomFrame, state="readonly",
+            self.bottomFrame, state="readonly", textvariable=self.source_var,
             values = config.videoTypes)
+        self.choose_source.current(config.last_source)
         self.choose_source.pack(side=tk.LEFT)
+        print("DEV source var: ",self.source_var.get())
 
-        tk.Button(self.bottomFrame,text="select"),
+        # start stop save buttons
         self.buttons = {
             "start": tk.Button(self.bottomFrame,text="start recording", bg='#aaaaff'),
             "stop": tk.Button(self.bottomFrame,text="stop", bg = '#ffaaaa'),
             "save": tk.Button(self.bottomFrame,text="save",bg="#88ff88"),
         }
+
         self.buttons["start"]["command"] = self.start_recording
         self.buttons["stop"]["command"] = self.stop_recording
         self.buttons["save"]["command"] = self.save_recording
@@ -85,15 +122,17 @@ class App(tk.Frame):
         self.buttons["stop"].pack(side=tk.LEFT, )
         self.buttons["save"].pack(side=tk.RIGHT, expand = True )
 
-        self.statusText = tk.Label(self,relief=tk.RAISED)
+        # status bar
+        self.status_text = tk.Label(self,relief=tk.RAISED)
         # self.statusText["text"] = "this is just a test label"
-        self.statusText.pack(side=tk.BOTTOM, fill=tk.X)
+        self.status_text.pack(side=tk.BOTTOM, fill=tk.X)
     
     def check_id(self):
     # callback for id
         pass
     
-    def patient_validation(self):
+    def validate_patient(self):
+        return False
         self.helper = DbHelper()
         patient_data = self.helper.get_patient_data(211219)
         self.helper.close()
@@ -105,9 +144,8 @@ class App(tk.Frame):
             self.validateFrame.pack_forget()
             self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
             
-
     def preview_recorder(self):
-    # self.opencv_img to be used for all recording purposes
+    # self.frame to be used for all recording purposes
 
         # capture frame by frame
         self.ok, self.frame = self._cam.read()
@@ -125,50 +163,83 @@ class App(tk.Frame):
         self.photo_img = ImageTk.PhotoImage(image=captured_img)
 
         # Display photoimage in Label
-        self.videoWidget.configure(image=self.photo_img)
+        self.video_widget.configure(image=self.photo_img)
 
 
         # label_widget
-        self.videoWidget.after(16, self.preview_recorder) # 16 value needs testing
+        self.video_widget.after(10, self.preview_recorder) # 16 value needs testing
     
     def start_recording(self, filename = 'output.mp4'):
         if self.ok:
-            # TODO show on status
+            self.set_status("STARTED RECORDING","DEFAULT")
             print("Started recording")
-
-        # the resolution should be received from the VideoCapture module
-        self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
-        self.is_recording = True
+            # the resolution should be received from the VideoCapture module
+            self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
+            self.is_recording = True
+        else:
+            self.set_status("Failed to start recording.","ERROR")
     
     def stop_recording(self):
-        # TODO show on status
-        print("Stopped recording")
         self.is_recording = False
         self._out.release()
+        self.set_status("STOPPED RECORDING","DEFAULT")
+        print("Stopped recording")
     
     def save_recording(self):
-        date_of_visit = dt.date(2000,1,1)
-        self.helper = DbHelper()
-        self.helper.save(12345, "OCT", date_of_visit)
-        self.helper.close()
+
+        if self.validate_patient():
+            self.helper = DbHelper(self)
+            self.helper.save(int(self.id_var.get()), self.source_var.get(), self.date_var.get())
+            self.helper.close()
+        else:
+            self.set_status("Invalid Patient ID. Could not find patient", "ERROR")
+    
+    def set_status(self, text="", type=""):
+    # types = DEFAULT, SUCCESS, ERROR
+    # just call set_status() to clear status
+        if type == "ERROR":
+            self.status_text["fg"] = "#ffffff"
+            self.status_text["bg"] = "#ff3333"
+        elif type == "SUCCESS":
+            self.status_text["fg"] = "#000000"
+            self.status_text["bg"] = "#11ff11"
+        elif type == "DEFAULT":
+            self.status_text["fg"] = "#ffffff"
+            self.status_text["bg"] = "#8888ff"
+        else:
+            self.status_text["fg"] = "#000000"
+            self.status_text["bg"] = "#ffffff"
+            print("invalid color type")
+        self.status_text["text"] = text
+
         
 
 
 class DbHelper():
+# should be instantiated, used and then cleaned by calling DbHelper().close()
     
-    def __init__(self):
-        self.db = mysql.connector.connect(
-            host=os.getenv("MYSQL_HOST"),
-            port=os.getenv("MYSQL_PORT"),
-            user=os.getenv("MYSQL_USER"),
-            password=os.getenv("MYSQL_PASSWORD"),
-            database=os.getenv("MYSQL_DATABASE")
-        )
+    def __init__(self, app: App):
+    
+        # connect to the database, using .env file variables
+        self.app = app # to access the tkinter app from here
+        try:
+            self.db = mysql.connector.connect(
+                host=os.getenv("MYSQL_HOST"),
+                port=os.getenv("MYSQL_PORT"),
+                user=os.getenv("MYSQL_USER"),
+                password=os.getenv("MYSQL_PASSWORD"),
+                database=os.getenv("MYSQL_DATABASE")
+            )
+            self.ok = True
+            # put table names in environment variables for convenience
+            self.video_table = os.getenv("MYSQL_VIDEO_TABLE")
+            self.patient_table= os.getenv("MYSQL_PATIENT_TABLE")
+            self.cursor = self.db.cursor()
+            self.saved = False
+        except Exception as e:
+            self.ok = False
+            self.app.set_status(f"[DB ERROR] {e}", "ERROR")
 
-        self.video_table = os.getenv("MYSQL_VIDEO_TABLE")
-        self.patient_table= os.getenv("MYSQL_PATIENT_TABLE")
-        self.cursor = self.db.cursor()
-        self.saved = False
     
     def save(self, *args):
     # args = (patient_id, video_type, date_of_visit)
@@ -178,18 +249,20 @@ class DbHelper():
 
         if self.saved:
             self.update_db(*args,filename)
+            self.app.set_status(f"Successfully saved as {filename} to the server!","SUCCESS")
         else:
-            # TODO status message and output error
             print(status) # write the status
+            self.app.set_status(f"Failed to save with ERROR: {status}","ERROR")
     
     def save_to_server(self, patient_id, video_type, date_of_visit, filename):
         try:
             # TODO server saving logic
             self.saved = True
+            return f"saved file as {filename} successfully"
 
         except Exception as e:
             # else
-            return "unable to save the file"
+            return e
 
     def update_db(self, patient_id, video_type, date_of_visit, filename):
         self.saved = False
@@ -200,7 +273,6 @@ class DbHelper():
             self.db.commit()
             print(self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
         except Exception as e:
-            # TODO status message and output error
             print("Dev Error:", e)
     
     def get_patient_data(self, patient_id):
@@ -214,6 +286,7 @@ class DbHelper():
 
     def generate_filename(self,*args):
         # get the latest filename form server
+        patient_id, type, *_ = args
         self.cursor.execute(
             f""" select r.patient_id, r.video_type, r.filename, r.created from rec_save_videos r 
                 inner join (
@@ -224,18 +297,18 @@ class DbHelper():
                     r.video_type=rm.video_type and
                     r.created=rm.MaxDate
                 where r.patient_id=%s and r.video_type=%s
-            """,args[0:2]);  # date_of_visit argument not required
+            """,(patient_id, type));  # date_of_visit argument not required
         result = self.cursor.fetchall()
         # extract last number and get next one (could have done better using regex)
         print("Dev Fetched:",result)
         if result:
             # increment and format (we use -1 to take the last entry to prevent redundency, but our app will take care of it anyway)
-            formatted_number = "%03d" % (int(result[-1][2].split('OCT')[1].split(".")[0])+1)
+            formatted_number = "%03d" % (int(result[-1][2].split(type)[1].split(".")[0])+1)
         else:
             # first video of this type
             formatted_number = "%03d" % 1
         # change "%03d" to %04d% for 4 digits
-        return f"/server/{args[0]}/{args[1]}{formatted_number}.mp4"
+        return f"/server/{patient_id}/{type}{formatted_number}.mp4"
     
     def close(self):
         # can't keep the connection open else, other instances won't be able to use it.
