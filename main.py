@@ -216,23 +216,30 @@ class App(tk.Frame):
 
 
         # label_widget
-        self.video_widget.after(10, self.preview_recorder) # 16 value needs testing
+        self.video_widget.after(config.rate, self.preview_recorder) # 16 value needs testing
     
     def start_recording(self, filename = 'output.mp4'):
-        if self.ok:
-            self.set_status("STARTED RECORDING","DEFAULT")
-            print("STARTED RECORDING")
-            # the resolution should be received from the VideoCapture module
-            self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (int(self._cam.get(3)),int(self._cam.get(4))))
-            self.is_recording = True
+        if not self.is_recording:
+            if self.ok:
+                self.set_status("STARTED RECORDING","DEFAULT")
+                print("STARTED RECORDING")
+                # the resolution should be received from the VideoCapture module
+                self._out= cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), config.fps, (int(self._cam.get(3)),int(self._cam.get(4))))
+                self.is_recording = True
+            else:
+                self.set_status("Failed to start recording.","ERROR")
         else:
-            self.set_status("Failed to start recording.","ERROR")
+            self.set_status("RECORDING has already STARTED!", "DEFAULT")
+            
     
     def stop_recording(self):
-        self.is_recording = False
-        self._out.release()
-        self.set_status("STOPPED RECORDING")
-        print("STOPPED RECORDING")
+        if self.is_recording:
+            self.is_recording = False
+            self._out.release()
+            self.set_status("STOPPED RECORDING")
+            print("STOPPED RECORDING")
+        else:
+            self.set_status("WARNING: NO recording in progress", "WARNING")
     
     def save_recording(self):
 

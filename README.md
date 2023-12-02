@@ -6,9 +6,12 @@ Aum Sri Sai Ram
 
 This app records the output of a camera device and stores it in the windows server location with a database entry to keep track of which patient the video belongs to.
 
-> [!CAUTION] > **DO NOT USE IT FOR THE LIVE ENVIRONMENT YET!**
+> [!TIP] > **TWO OPTIONS YOU MUST TWEAK**
 >
-> The app doesn't have the "COPYING to the SERVER" logic, so it is only for preview as of now. The database and the rest work
+> The app can copy to a location on any mounted drive, by setting the `fileServerLocation` option in the `config.json` file
+>
+> You have to tweak the `fps` and `rate` flag in the config to get the right values
+> (`fps` is cv.writer's FPS value) (`rate` is the rate at which the frames are being captured, e.g. `rate = 10` means 1 frame every 10 milliseconds)
 
 # Installation steps
 
@@ -72,13 +75,21 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 
 ```json
 {
-  "fileServerLocation": "//BOOK",
+  "fps": 30,
+  "rate": 10,
+  "fileServerLocation": "STORAGE",
   "videoDevice": 0,
   "videoTypes": ["OCT", "MRI", "CT"],
   "width": 1280,
   "height": 720,
   "last_source": "MRI",
-  "last_patient_id": "211219"
+  "last_patient_id": "211220",
+  "patient_table_args": {
+    "id": "id",
+    "name": "name",
+    "date_of_birth": "dob",
+    "sex": "sex"
+  }
 }
 ```
 

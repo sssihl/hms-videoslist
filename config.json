@@ -1,4 +1,6 @@
 {
+    "fps": 30,
+    "rate": 10,
     "fileServerLocation": "STORAGE",
     "videoDevice": "../assets/discourse.mp4",
     "videoTypes": [
