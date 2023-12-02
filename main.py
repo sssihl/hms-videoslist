@@ -72,30 +72,29 @@ class App(tk.Frame):
         self.inputFrame.pack(side=tk.LEFT, fill=tk.BOTH)
         self.validateFrame = tk.Frame(self.topFrame)
         self.patientNotFound = tk.Label(self.topFrame,text="No Patient with this ID")
-        # self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
-        # self.validateFrame.pack(side=tk.LEFT)
 
         # input_id
         tk.Label(self.inputFrame,text="ID").grid(row = 0, column=0)
-        self.input_id = tk.Entry(self.inputFrame, textvariable=self.id_var)
+        self.input_id = tk.Entry(self.inputFrame, textvariable=self.id_var, justify="center")
         self.input_id.grid(row = 0, column = 1)
+        self.id_var.trace_add('write',self.check_id)
 
         # input_date
         # TODO datepicker
         tk.Label(self.inputFrame,text="Date").grid(row = 1, column=0)
-        self.input_date = tk.Entry(self.inputFrame, textvariable=self.date_var)
+        self.input_date = tk.Entry(self.inputFrame, textvariable=self.date_var, justify="center")
         self.input_date.insert(0,str(datetime.now()).split()[0])
         self.input_date.grid(row=1, column=1)
 
         ## validate
-        self.info = [tk.Label(self.validateFrame,text=text) for text in ["\tName\t: ","\tAge\t: ", "\tSex\t: "]]
+        self.info = [tk.Label(self.validateFrame,text=text) for text in ["\tName\t: ","\tAge\t: ", "\tSex\t:", "\tDOB\t:"]]
         for i in self.info:
-            i.pack(expand=True)
+            i.pack(expand=True, anchor="w")
 
         
         # BOTTOM FRAME -----------------------------------------------
 
-        # TODO video frame
+        # video_widget
         self.video_widget = tk.Label(self.bottomFrame)
         self.video_widget.pack()
 
@@ -127,22 +126,42 @@ class App(tk.Frame):
         # self.statusText["text"] = "this is just a test label"
         self.status_text.pack(side=tk.BOTTOM, fill=tk.X)
     
-    def check_id(self):
-    # callback for id
-        pass
+    def check_id(self, var: tk.StringVar, index, mode):
+        val = self.id_var.get()
+        
+        if len(val) == 6: # what is id length
+            self.validate_patient(val)
+        else:
+            self.patientNotFound.pack_forget()
+            self.validateFrame.pack_forget()
     
-    def validate_patient(self):
-        return False
-        self.helper = DbHelper()
-        patient_data = self.helper.get_patient_data(211219)
+        
+
+    # callback for id
+    
+    def validate_patient(self, patient_id):
+        self.helper = DbHelper(self)
+        patient_data = self.helper.get_patient_data(patient_id)
         self.helper.close()
 
         if patient_data:
+            print("DEV PRINT",patient_data)
+            name = patient_data[1]
+            age = patient_data[2].year
+            sex = patient_data[3]
+            dob = patient_data[2].strftime("%d/%m/%Y")
+
             self.patientNotFound.pack_forget()
-            self.validateFrame.pack(side=tk.LEFT)
+            self.validateFrame.pack(side=tk.LEFT, anchor='e')
+            self.info[0]["text"] = f"\tName\t:{name}"
+            self.info[1]["text"] = f"\tAge\t:{age}"
+            self.info[2]["text"] = f"\tSex\t:{sex}"
+            self.info[3]["text"] = f"\tDOB\t:{dob}"
+            return True
         else:
             self.validateFrame.pack_forget()
-            self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH)
+            self.patientNotFound.pack(side=tk.LEFT,fill=tk.BOTH, anchor='e')
+            return False
             
     def preview_recorder(self):
     # self.frame to be used for all recording purposes
@@ -187,7 +206,7 @@ class App(tk.Frame):
     
     def save_recording(self):
 
-        if self.validate_patient():
+        if self.validate_patient(self.id_var.get()):
             self.helper = DbHelper(self)
             self.helper.save(int(self.id_var.get()), self.source_var.get(), self.date_var.get())
             self.helper.close()
@@ -209,7 +228,6 @@ class App(tk.Frame):
         else:
             self.status_text["fg"] = "#000000"
             self.status_text["bg"] = "#ffffff"
-            print("invalid color type")
         self.status_text["text"] = text
 
         
@@ -276,9 +294,10 @@ class DbHelper():
             print("Dev Error:", e)
     
     def get_patient_data(self, patient_id):
+        patient_id = int(patient_id)
         self.cursor.execute(f"SELECT * FROM {self.patient_table} where id={patient_id}")
         result = self.cursor.fetchall()
-        print(result)
+        print("FETCHED PATIENT DATA:", result)
         if result:
             return result[0]
         else:
@@ -300,7 +319,7 @@ class DbHelper():
             """,(patient_id, type));  # date_of_visit argument not required
         result = self.cursor.fetchall()
         # extract last number and get next one (could have done better using regex)
-        print("Dev Fetched:",result)
+        print("FETCHED FILENAME DATA:",result)
         if result:
             # increment and format (we use -1 to take the last entry to prevent redundency, but our app will take care of it anyway)
             formatted_number = "%03d" % (int(result[-1][2].split(type)[1].split(".")[0])+1)
