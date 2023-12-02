@@ -2,11 +2,11 @@
 Aum Sri Sai Ram
 </h1>
 
-## About
+# About
 
 This app records the output of a camera device and stores it in the windows server location with a database entry to keep track of which patient the video belongs to.
 
-## Installation
+# Installation steps
 
 1. Just run the following command to install all the required dependencies
 
@@ -18,32 +18,31 @@ pip install -r requirements.txt
 
 At this point, you have **two choices**:
 
-### I don't have an existing `patients_table`
-> If you don't have a `patients_table` in your database, then create one by running `migrations/patients_table.sql` file in mysql to generate the table
+- **I don't have an existing `patients_table`**
+  > If you don't have a `patients_table` in your database, then create one by running `migrations/patients_table.sql` file in mysql to generate the table
 
-### I have an existing `patients_table` called `my_patients_table`
-> If you have an existing `my_patients_table` that you want to use with the application, you have to do two things.
+- **I have an existing `patients_table` called `my_patients_table`**
+  > If you have an existing `my_patients_table` that you want to use with the application, you have to do two things.
 
-Update your `.env` variable to set the `MYSQL_PATIENT_TABLE`
-```.env
-...
-MYSQL_PATIENT_TABLE=my_patients_table
-```
-
-Update your `config.json` with the correct field names from the patient's table (say, they are `myid`, `myname`, `mydob`, `mysex`)
-```json
-{
-
+  Update your `.env` variable to set the `MYSQL_PATIENT_TABLE`
+  ```.env
   ...
+  MYSQL_PATIENT_TABLE=my_patients_table
+  ```
 
-  "patient_table_args": {
-    "id": "myid",
-    "name": "myname",
-    "date_of_birth": "mydob",
-    "sex": "mysex"
+  Update your `config.json` with the correct field names from the patient's table (say, they are `myid`, `myname`, `mydob`, `mysex`)
+  ```json
+  {
+    ...previous entries
+  
+    "patient_table_args": {
+      "id": "myid",
+      "name": "myname",
+      "date_of_birth": "mydob",
+      "sex": "mysex"
+     }
   }
-}
-```
+  ```
 
   
   
@@ -83,7 +82,7 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 
 5. Run the `main.py` file to **launch the application**
 
-## Actions
+# Actions
 
 - [x] POST: **Patient ID**
 - [x] FETCH: Name Age Sex (to be displayed for validation)
@@ -96,7 +95,7 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 
 - [ ] ACTION: Copy to windows server
 
-## Database Structure
+# Database Structure
 
 ### VIDEOS:
 | ID | PATIENT_ID | VIDEO_TYPE | FILENAME | CREATED | DATE_OF_VISIT|
@@ -108,7 +107,7 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 |---|---|---|---|
 | INT (UUID) | full name (STRING) | DATE | (MALE/FEMALE) |
 
-## Folder Structure in server (for saving)
+# Folder Structure in server (for saving)
 
 ```
 \\server\location
