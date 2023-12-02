@@ -16,33 +16,33 @@ pip install -r requirements.txt
 
 2. Run the `migrations/videos_table.sql` in `mysql to generate the videos table which will be used to save information about the videos and their location
 
-At this point, you have **two choices**:
+    At this point, you have **two choices**:
 
-- **I don't have an existing `patients_table`**
-  > If you don't have a `patients_table` in your database, then create one by running `migrations/patients_table.sql` file in mysql to generate the table
-
-- **I have an existing `patients_table` called `my_patients_table`**
-  > If you have an existing `my_patients_table` that you want to use with the application, you have to do two things.
-
-  Update your `.env` variable to set the `MYSQL_PATIENT_TABLE`
-  ```.env
-  ...
-  MYSQL_PATIENT_TABLE=my_patients_table
-  ```
-
-  Update your `config.json` with the correct field names from the patient's table (say, they are `myid`, `myname`, `mydob`, `mysex`)
-  ```json
-  {
-    ...previous entries
-  
-    "patient_table_args": {
-      "id": "myid",
-      "name": "myname",
-      "date_of_birth": "mydob",
-      "sex": "mysex"
-     }
-  }
-  ```
+    - **I don't have an existing `patients_table`**
+      > If you don't have a `patients_table` in your database, then create one by running `migrations/patients_table.sql` file in mysql to generate the table
+    
+    - **I have an existing `patients_table` called `my_patients_table`**
+      > If you have an existing `my_patients_table` that you want to use with the application, you have to do two things.
+    
+      Update your `.env` variable to set the `MYSQL_PATIENT_TABLE`
+      ```.env
+      ...
+      MYSQL_PATIENT_TABLE=my_patients_table
+      ```
+    
+      Update your `config.json` with the correct field names from the patient's table (say, they are `myid`, `myname`, `mydob`, `mysex`)
+      ```json
+      {
+        ...previous entries
+      
+        "patient_table_args": {
+          "id": "myid",
+          "name": "myname",
+          "date_of_birth": "mydob",
+          "sex": "mysex"
+         }
+      }
+      ```
 
   
   
