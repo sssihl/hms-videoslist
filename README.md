@@ -7,7 +7,6 @@ Aum Sri Sai Ram
 This app records the output of a camera device and stores it in the windows server location with a database entry to keep track of which patient the video belongs to.
 
 > [!TIP]
-> > **TWO OPTIONS YOU MUST TWEAK**
 >
 > The app can copy to a location on any mounted drive, by setting the `fileServerLocation` option in the `config.json` file
 >
