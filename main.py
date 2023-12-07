@@ -1,5 +1,5 @@
 import os, shutil
-import mysql.connector, pymssql , cv2
+import mysql.connector, pymssql, oracledb , cv2
 from tkinter import ttk
 from datetime import datetime
 import tkinter as tk
@@ -281,30 +281,54 @@ class DbHelper():
 # should be instantiated, used and then cleaned by calling DbHelper().close()
     
     def __init__(self, app: App):
-        options = {
-            "host": os.getenv("SQL_HOST"),
-            "port": os.getenv("SQL_PORT"),
-            "user": os.getenv("SQL_USER"),
-            "password": os.getenv("SQL_PASSWORD"),
-            "database": os.getenv("SQL_DATABASE"),
-        }
-    
-        # connect to the database, using .env file variables
         self.app = app # to access the tkinter app from here
-        if os.getenv("SQL_PROVIDER") == "MSSQL":
-            self.provider = pymssql
-            options["as_dict"] = True
-        elif os.getenv("SQL_PROVIDER") == "MYSQL":
-            self.provider = mysql.connector
+        v_options = {
+            "host": os.getenv("V_SQL_HOST"),
+            "port": os.getenv("V_SQL_PORT"),
+            "user": os.getenv("V_SQL_USER"),
+            "password": os.getenv("V_SQL_PASSWORD"),
+            "database": os.getenv("V_SQL_DATABASE"),
+        }
+        # connect to the database, using .env file variables
+        if os.getenv("V_SQL_PROVIDER") == "MSSQL":
+            self.vprovider = pymssql
+            v_options["as_dict"] = True
+        elif os.getenv("V_SQL_PROVIDER") == "MYSQL":
+            self.vprovider = mysql.connector
         else:
+            self.app.set_status(f"INVALID V_SQL_PROVIDER", "ERROR")
             raise Exception("Invalid SQL provider. Edit in config.json")
+            
+        # TODO options for patients database too
+        if os.getenv("P_SQL_PROVIDER") == "ORACLE":
+            self.pprovider = oracledb
+            self.pdbconnect_options = {
+                "user": os.getenv("P_SQL_USER"),
+                "password": os.getenv("P_SQL_PASSWORD"),
+                "dsn": os.getenv("P_SQL_HOST")+r"/"+os.getenv("P_SQL_DATABASE"),
+
+            }
+        elif os.getenv("P_SQL_PROVIDER") == "MYSQL":
+            self.pprovider = mysql.connector
+            self.pdbconnect_options = {
+                "host": os.getenv("P_SQL_HOST"),
+                "port": os.getenv("P_SQL_PORT"),
+                "user": os.getenv("P_SQL_USER"),
+                "password": os.getenv("P_SQL_PASSWORD"),
+                "database": os.getenv("P_SQL_DATABASE"),
+            }
+
+        else:
+            self.app.set_status(f"INVALID V_SQL_PROVIDER", "ERROR")
+            raise Exception("Invalid SQL provider. Edit in config.json")
+
         try:
-            self.db = self.provider.connect(**options)
+            self.vdb = self.vprovider.connect(**v_options)
             self.ok = True
             # put table names in environment variables for convenience
-            self.video_table = os.getenv("MYSQL_VIDEO_TABLE")
-            self.patient_table= os.getenv("MYSQL_PATIENT_TABLE")
-            self.cursor = self.db.cursor()
+            self.video_table = os.getenv("V_SQL_VIDEO_TABLE")
+            self.patient_table= os.getenv("P_SQL_PATIENT_TABLE")
+            self.cursor = self.vdb.cursor()
             self.saved = False
         except Exception as e:
             self.ok = False
@@ -354,19 +378,37 @@ class DbHelper():
             self.cursor.execute(
                 f"INSERT INTO `{self.video_table}` (patient_id, video_type, filename, date_of_visit) values (%s, %s, %s, %s)",
                 (patient_id,video_type,filename, date_of_visit),)
-            self.db.commit()
+            self.vdb.commit()
             print("DB UPDATE:",self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
         except Exception as e:
             print("ERROR UPDATE DB", e)
     
     def get_patient_data(self, patient_id):
+        same =  os.getenv("P_SQL_DATABASE") == os.getenv("V_SQL_DATABASE")
         try:
-            self.cursor.execute(f"""
-            SELECT `{config.patient_table_args["id"]}`, `{config.patient_table_args["name"]}`,
-            `{config.patient_table_args["date_of_birth"]}`, `{config.patient_table_args["sex"]}`
-            FROM {self.patient_table} where id={patient_id}""")
-            result = self.cursor.fetchall()
-            print("FETCHED PATIENT DATA:", result)
+            if (same):
+                print('same database used')
+                pcursor = self.cursor
+                pcursor.execute(f"""
+                SELECT `{config.patient_table_args["id"]}`, `{config.patient_table_args["name"]}`,
+                `{config.patient_table_args["date_of_birth"]}`, `{config.patient_table_args["sex"]}`
+                FROM {self.patient_table} where id={patient_id}""")
+                print('I am here')
+                result = pcursor.fetchall()
+                print("FETCHED PATIENT DATA:", result)
+            else:
+                print('creating a new connection')
+                pdb = self.pprovider.connect(**self.pdbconnect_options)
+                pcursor = pdb.cursor()
+                print('123412341234')
+                pcursor.execute(f"""
+                SELECT `{config.patient_table_args["id"]}`, `{config.patient_table_args["name"]}`,
+                `{config.patient_table_args["date_of_birth"]}`, `{config.patient_table_args["sex"]}`
+                FROM {self.patient_table} where id={patient_id}""")
+                result = pcursor.fetchall()
+                print("FETCHED PATIENT DATA:", result)
+                pcursor.close()
+                pdb.close()
             if result:
                 return result[0]
             else:
@@ -402,7 +444,9 @@ class DbHelper():
     def close(self):
         # can't keep the connection open else, other instances won't be able to use it.
         try:
-            self.db.close()
+            if self.vprovider.__name__ == "MSSQL":
+                self.vdb.commit()
+            self.vdb.close()
         except Exception as e:
             print("ERROR CLOSE", e)
         
