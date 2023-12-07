@@ -1,21 +1,17 @@
 {
-    "fps": 30,
-    "rate": 10,
-    "fileServerLocation": "STORAGE",
-    "videoDevice": "../assets/discourse.mp4",
-    "videoTypes": [
-        "OCT",
-        "MRI",
-        "CT"
-    ],
-    "width": 1280,
-    "height": 720,
-    "last_source": "OCT",
-    "last_patient_id": "111222333445",
-    "patient_table_args": {
-        "id": "id",
-        "name": "name",
-        "date_of_birth": "dob",
-        "sex": "sex"
-    }
+  "fps": 30,
+  "rate": 10,
+  "fileServerLocation": "STORAGE",
+  "videoDevice": "../assets/discourse.mp4",
+  "videoTypes": ["OCT", "MRI", "CT"],
+  "width": 1280,
+  "height": 720,
+  "last_source": "OCT",
+  "last_patient_id": "111222333445",
+  "patient_table_args": {
+    "id": "id",
+    "name": "name",
+    "date_of_birth": "dob",
+    "sex": "sex"
+  }
 }

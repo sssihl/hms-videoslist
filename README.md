@@ -152,3 +152,9 @@ MYSQL_PATIENT_TABLE=rec_save_patients
 ```
 
 Syntax `\\server\location\PATIENT_ID\DATE_OF_VISIT\VIDEO_TYPE00x.mp4`
+
+# Installation on Linux (additional steps)
+
+```console
+sudo apt-get install python3-tk
+```

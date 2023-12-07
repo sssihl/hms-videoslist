@@ -1,7 +1,5 @@
 mysql-connector-python==8.2.0
+pymssql
 numpy==1.24.4
 opencv-python==4.8.1.78
 Pillow==10.1.0
-protobuf==4.25.1
-pycparser==2.21
-pyspnego==0.10.2

@@ -1,5 +1,5 @@
 import os, shutil
-import mysql.connector, cv2
+import mysql.connector, pymssql , cv2
 from tkinter import ttk
 from datetime import datetime
 import tkinter as tk
@@ -281,17 +281,25 @@ class DbHelper():
 # should be instantiated, used and then cleaned by calling DbHelper().close()
     
     def __init__(self, app: App):
+        options = {
+            "host": os.getenv("SQL_HOST"),
+            "port": os.getenv("SQL_PORT"),
+            "user": os.getenv("SQL_USER"),
+            "password": os.getenv("SQL_PASSWORD"),
+            "database": os.getenv("SQL_DATABASE"),
+        }
     
         # connect to the database, using .env file variables
         self.app = app # to access the tkinter app from here
+        if os.getenv("SQL_PROVIDER") == "MSSQL":
+            self.provider = pymssql
+            options["as_dict"] = True
+        elif os.getenv("SQL_PROVIDER") == "MYSQL":
+            self.provider = mysql.connector
+        else:
+            raise Exception("Invalid SQL provider. Edit in config.json")
         try:
-            self.db = mysql.connector.connect(
-                host=os.getenv("MYSQL_HOST"),
-                port=os.getenv("MYSQL_PORT"),
-                user=os.getenv("MYSQL_USER"),
-                password=os.getenv("MYSQL_PASSWORD"),
-                database=os.getenv("MYSQL_DATABASE")
-            )
+            self.db = self.provider.connect(**options)
             self.ok = True
             # put table names in environment variables for convenience
             self.video_table = os.getenv("MYSQL_VIDEO_TABLE")
