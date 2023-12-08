@@ -5,8 +5,8 @@ from datetime import datetime
 import tkinter as tk
 from PIL import Image, ImageTk
 import json
-
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -36,9 +36,9 @@ class App(tk.Frame):
         # an App frame
         super().__init__(master)
         self.master = master
-        self.pack(expand=True)
+        self.pack(expand=False)
         # should be changed to 0,1,2... depending on capture device
-        self._cam = cv2.VideoCapture(config.videoDevice, cv2.CAP_DSHOW)
+        self._cam = cv2.VideoCapture(0,cv2.CAP_DSHOW)
         self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
         self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
 
@@ -85,11 +85,12 @@ class App(tk.Frame):
         self.bottomFrame = tk.Frame(self)
         self.topFrame.pack(fill=tk.X, expand=True)
         self.bottomFrame.pack(expand=True)
-
+ 
         # TOP FRAME ----------------------------------------------------
 
         self.inputFrame = tk.Frame(self.topFrame)
         self.inputFrame.pack(side=tk.LEFT, fill=tk.BOTH)
+
         self.validateFrame = tk.Frame(self.topFrame)
         self.patientNotFound = tk.Label(self.topFrame,text="No Patient with this ID")
 
@@ -154,7 +155,7 @@ class App(tk.Frame):
     def check_id(self, var, index, mode):
         val = self.id_var.get()
         
-        if len(val) == 12: # what is id length
+        if 10 <= len(val) <= 12: # what is id length
             self.validate_patient(val)
         else:
             self.patientNotFound.pack_forget()
@@ -206,7 +207,7 @@ class App(tk.Frame):
 
         # convert image colorspace
         self.opencv_img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGBA)
-
+        cv2.waitKey(config.rate)
         # capture latest frame
         captured_img = Image.fromarray(self.opencv_img)
 
@@ -219,6 +220,7 @@ class App(tk.Frame):
 
         # label_widget
         self.video_widget.after(config.rate, self.preview_recorder) # 16 value needs testing
+        
     
     def start_recording(self, filename = 'output.mp4'):
         if not self.is_recording:
@@ -248,7 +250,7 @@ class App(tk.Frame):
         if self.validate_patient(self.id_var.get()):
             self.helper = DbHelper(self)
             if self.helper.ok:
-                self.helper.save(int(self.id_var.get()), self.source_var.get(), self.date_var.get())
+                self.helper.save(self.id_var.get(), self.source_var.get(), self.date_var.get())
             else:
                 self.set_status("Couldn't connect to Database! Please contact Admin","ERROR")
 
@@ -274,7 +276,9 @@ class App(tk.Frame):
         else:
             self.status_text["fg"] = "#000000"
             self.status_text["bg"] = "#ffffff"
-        self.status_text["text"] = text
+        chunk_size = 90
+        chunks= len(text)
+        self.status_text["text"] = '\n'.join([ text[i:i+chunk_size] for i in range(0, chunks, chunk_size) ])
 
         
 
@@ -284,6 +288,7 @@ class DbHelper():
     
     def __init__(self, app: App):
         self.app = app # to access the tkinter app from here
+        
         v_options = {
             "host": os.getenv("V_SQL_HOST"),
             "port": os.getenv("V_SQL_PORT"),
@@ -293,15 +298,36 @@ class DbHelper():
         }
         # connect to the database, using .env file variables
         if os.getenv("V_SQL_PROVIDER") == "MSSQL":
+            v_options = {
+                "server": os.getenv("P_SQL_HOST"),
+                "user": os.getenv("V_SQL_USER"),
+                "password": os.getenv("V_SQL_PASSWORD"),
+                "database": os.getenv("V_SQL_DATABASE"),
+            }
             self.vprovider = pymssql
-            v_options["as_dict"] = True
         elif os.getenv("V_SQL_PROVIDER") == "MYSQL":
             self.vprovider = mysql.connector
+            v_options = {
+                "host": os.getenv("V_SQL_HOST"),
+                "port": os.getenv("V_SQL_PORT"),
+                "user": os.getenv("V_SQL_USER"),
+                "password": os.getenv("V_SQL_PASSWORD"),
+                "database": os.getenv("V_SQL_DATABASE"),
+            }
         else:
             self.app.set_status(f"INVALID V_SQL_PROVIDER", "ERROR")
-            raise Exception("Invalid SQL provider. Edit in config.json")
+            raise Exception("Invalid V_SQL provider. Edit in .env")
             
         # TODO options for patients database too
+        self.pdbconnect_options = {
+                "host": os.getenv("P_SQL_HOST"),
+                "port": os.getenv("P_SQL_PORT"),
+                "user": os.getenv("P_SQL_USER"),
+                "password": os.getenv("P_SQL_PASSWORD"),
+                "database": os.getenv("P_SQL_DATABASE"),
+            }
+        print(self.pdbconnect_options)
+
         if os.getenv("P_SQL_PROVIDER") == "ORACLE":
             self.pprovider = oracledb
             self.pdbconnect_options = {
@@ -320,12 +346,22 @@ class DbHelper():
                 "database": os.getenv("P_SQL_DATABASE"),
             }
 
+        elif os.getenv("P_SQL_PROVIDER") == "MSSQL":
+            self.pprovider = pymssql
+            self.pdbconnect_options = {
+                "server": os.getenv("P_SQL_HOST"),
+                "user": os.getenv("P_SQL_USER"),
+                "password": os.getenv("P_SQL_PASSWORD"),
+                "database": os.getenv("P_SQL_DATABASE"),
+            }
+
         else:
-            self.app.set_status(f"INVALID V_SQL_PROVIDER", "ERROR")
-            raise Exception("Invalid SQL provider. Edit in config.json")
+            self.app.set_status(f"INVALID P_SQL_PROVIDER", "ERROR")
+            raise Exception("Invalid P_SQL provider. Edit in config.json")
 
         try:
             self.vdb = self.vprovider.connect(**v_options)
+            print(self.vdb,"connected successfully")
             self.ok = True
             # put table names in environment variables for convenience
             self.video_table = os.getenv("V_SQL_VIDEO_TABLE")
@@ -334,7 +370,7 @@ class DbHelper():
             self.saved = False
         except Exception as e:
             self.ok = False
-            self.app.set_status(f"[DB ERROR] {e}", "ERROR")
+            self.app.set_status(f"[DB ERROR 1] {e}", "ERROR")
 
     
     def save(self, *args):
@@ -378,35 +414,34 @@ class DbHelper():
         self.saved = False
         try:
             self.cursor.execute(
-                f"INSERT INTO `{self.video_table}` (patient_id, video_type, filename, date_of_visit) values (%s, %s, %s, %s)",
+                f"INSERT INTO {self.video_table} (patient_id, video_type, filename, date_of_visit) values (%s, %s, %s, %s)",
                 (patient_id,video_type,filename, date_of_visit),)
             self.vdb.commit()
             print("DB UPDATE:",self.cursor.rowcount, "rows inserted, ID:", self.cursor.lastrowid);
         except Exception as e:
             print("ERROR UPDATE DB", e)
     
-    def get_patient_data(self, patient_id):
+    def get_patient_data(self, patient_id_data):
         same =  os.getenv("P_SQL_DATABASE") == os.getenv("V_SQL_DATABASE")
         try:
             if (same):
                 print('same database used')
                 pcursor = self.cursor
+                patient_id_data =str(patient_id_data)
                 pcursor.execute(f"""
-                SELECT `{config.patient_table_args["id"]}`, `{config.patient_table_args["name"]}`,
-                `{config.patient_table_args["date_of_birth"]}`, `{config.patient_table_args["sex"]}`
-                FROM {self.patient_table} where id={patient_id}""")
-                print('I am here')
+                SELECT {config.patient_table_args["id"]}, {config.patient_table_args["name"]},
+                {config.patient_table_args["date_of_birth"]}, {config.patient_table_args["sex"]}
+                FROM {self.patient_table} where {config.patient_table_args["id"]}='{patient_id_data}'""")
                 result = pcursor.fetchall()
                 print("FETCHED PATIENT DATA:", result)
             else:
                 print('creating a new connection')
                 pdb = self.pprovider.connect(**self.pdbconnect_options)
                 pcursor = pdb.cursor()
-                print('123412341234')
                 pcursor.execute(f"""
                 SELECT `{config.patient_table_args["id"]}`, `{config.patient_table_args["name"]}`,
                 `{config.patient_table_args["date_of_birth"]}`, `{config.patient_table_args["sex"]}`
-                FROM {self.patient_table} where id={patient_id}""")
+                FROM {self.patient_table} where id={patient_id_data}""")
                 result = pcursor.fetchall()
                 print("FETCHED PATIENT DATA:", result)
                 pcursor.close()
@@ -419,13 +454,14 @@ class DbHelper():
             print("ERROR PATIENT DATA",e)
 
     def generate_filename(self,*args):
+        videos_table = os.getenv("V_SQL_VIDEO_TABLE")
         # get the latest filename form server
         patient_id, type, *_ = args
         self.cursor.execute(
-            f""" select r.patient_id, r.video_type, r.filename, r.created from rec_save_videos r 
+            f""" select r.patient_id, r.video_type, r.filename, r.created from {videos_table} r 
                 inner join (
                     select patient_id, video_type, max(created) as MaxDate
-                    from rec_save_videos
+                    from {videos_table}
                     group by video_type, patient_id ) rm
                 on  r.patient_id=rm.patient_id and
                     r.video_type=rm.video_type and
