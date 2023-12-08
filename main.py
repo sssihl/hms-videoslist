@@ -6,6 +6,8 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import json
 
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class Config:
@@ -36,7 +38,7 @@ class App(tk.Frame):
         self.master = master
         self.pack(expand=True)
         # should be changed to 0,1,2... depending on capture device
-        self._cam = cv2.VideoCapture(config.videoDevice)
+        self._cam = cv2.VideoCapture(config.videoDevice, cv2.CAP_DSHOW)
         self._cam.set(cv2.CAP_PROP_FRAME_WIDTH, config.width)
         self._cam.set(cv2.CAP_PROP_FRAME_HEIGHT, config.height)
 
